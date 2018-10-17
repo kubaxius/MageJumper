@@ -1,7 +1,6 @@
-[gd_scene load_steps=3 format=2]
+[gd_scene load_steps=2 format=2]
 
 [ext_resource path="res://tool/script/TouchSymbolHandler.gd" type="Script" id=1]
-[ext_resource path="res://spell/image/example2.png" type="Texture" id=2]
 
 [node name="TouchSymbolHandler" type="Button" index="0"]
 
@@ -30,7 +29,6 @@ _sections_unfolded = [ "Margin", "Material", "Transform", "Visibility" ]
 [node name="Sprite" type="Sprite" parent="." index="0"]
 
 position = Vector2( 570, 110 )
-texture = ExtResource( 2 )
 _sections_unfolded = [ "Transform" ]
 
 [connection signal="button_down" from="." to="." method="_on_TouchSymbolHandler_button_down"]

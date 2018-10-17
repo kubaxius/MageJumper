@@ -10,23 +10,24 @@ var scaled_touch_path = []
 #built in functions
 ###################
 func _ready():
-	load_spell_symbols(["example1", "example2", "example3", "example4", "bad" ])
+	load_spell_symbols(["bad", "jump", "thunder", "spin", "bubble", "kill" ])
 	pass
 
 func _process(delta):
-	if is_pressed:
-		if raw_touch_path.empty() || raw_touch_path.back() != get_global_mouse_position():
-			raw_touch_path.append(get_global_mouse_position())
-		pass
+	track_mouse()
+	pass
 
-#uncomment to see raw_touch_path and scaled_touch_path on screen
 func _draw():
-	draw_multiline(scaled_touch_path, Color(1.0, 0.0, 0.0, 1.0), 10)
-	draw_multiline(raw_touch_path, Color(0.0, 1.0, 0.0, 1.0), 10)
+	debug_draw()
 	pass
 
 #my functions
 #############
+func track_mouse():
+	if is_pressed:
+		if raw_touch_path.empty() || raw_touch_path.back() != get_global_mouse_position():
+			raw_touch_path.append(get_global_mouse_position())
+
 func load_spell_symbols(spell_list):
 	for spell_name in spell_list:
 		spell_symbols[spell_name] = (Image.new())
@@ -89,15 +90,46 @@ func scale_touch_path(raw_touch_path, spell_map_width, spell_map_height, margin=
 func compare_path_to_spells():
 	var compability = {}
 	if raw_touch_path.size() > 4:
-		var spell_w = ProjectSettings.get_setting("Others/Spell Map Width")
-		var spell_h = ProjectSettings.get_setting("Others/Spell Map Height")
-		scaled_touch_path = scale_touch_path(raw_touch_path, spell_w, spell_h, 30)
+		var spell_w = ProjectSettings.get_setting("game/Touch Symbol Handler/Spell Map Width")
+		var spell_h = ProjectSettings.get_setting("game/Touch Symbol Handler/Spell Map Height")
+		var draw_margins = ProjectSettings.get_setting("game/Touch Symbol Handler/Generated Image Margins")
+		scaled_touch_path = scale_touch_path(raw_touch_path, spell_w, spell_h, draw_margins)
 		for symbol in spell_symbols:
+			var ok_placement = 0
+			var not_ok_placement = 0
 			compability[symbol] = 0
 			for pos in scaled_touch_path:
-				compability[symbol] += spell_symbols[symbol].get_pixel(pos.x, pos.y).r
-			compability[symbol] /= scaled_touch_path.size()
+				ok_placement += spell_symbols[symbol].get_pixel(pos.x, pos.y).g
+				not_ok_placement += spell_symbols[symbol].get_pixel(pos.x, pos.y).r
+			compability[symbol] = ok_placement/scaled_touch_path.size() - not_ok_placement/scaled_touch_path.size()
 	return compability
+
+func debug_draw():
+	if ProjectSettings.get_setting("game/others/Debug Mode") :
+		draw_multiline(scaled_touch_path, Color(1.0, 0.0, 0.0, 1.0), 10)
+		draw_multiline(raw_touch_path, Color(0.0, 1.0, 0.0, 1.0), 10)
+
+func get_spell(accuracy_margin):
+	var comp = compare_path_to_spells()
+	var best = "bad"
+	var best_score = 0
+	for i in comp:
+		if comp[i] > accuracy_margin && comp[i] > best_score:
+			best = i
+			best_score = comp[i]
+			pass
+	#debug
+	if ProjectSettings.get_setting("game/others/Debug Mode"):
+		var tex = ImageTexture.new()
+		tex.create_from_image(spell_symbols[best])
+		get_child(0).set_texture(tex)
+		var prnt = ""
+		
+		for i in comp:
+			prnt += i + ": " + String(round(comp[i]*100)) + "%  "
+		print(prnt)
+	
+	return best
 
 #signal_receivers
 #################
@@ -107,16 +139,6 @@ func _on_TouchSymbolHandler_button_down():
 	is_pressed = true
 
 func _on_TouchSymbolHandler_button_up():
-	var comp = compare_path_to_spells()
-	var best = "bad"
-	var best_score = 0
-	for i in comp:
-		if comp[i] > 0.75 && comp[i] > best_score:
-			best = i
-			best_score = comp[i]
-			pass
-	var tex = ImageTexture.new()
-	tex.create_from_image(spell_symbols[best])
-	get_child(0).set_texture(tex)
+	get_spell(ProjectSettings.get_setting("game/Touch Symbol Handler/Accuracy Margin"))
 	is_pressed = false
 
